@@ -10,8 +10,6 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-result = main.analyze_document(user_input)
-
 st.title("Проверка структуры ВКР")
 st.markdown(
     "Загрузите файл вашей работы в формате `.docx`, чтобы модель-критик проверила "
