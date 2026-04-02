@@ -58,18 +58,18 @@ if uploaded_file is not None:
                         for sec in results.get("detected_sections", []):
                             st.text(f"🔹 {sec['title']}")
 
-                    # Разделение экрана на две колонки для вывода Критика и Генератора
-                    col1, col2 = st.columns(2)
+                # Разделение экрана на две колонки для вывода Критика и Генератора
+                col1, col2 = st.columns(2)
                     
-                    with col1:
-                        st.header("Заключение Критика")
-                        if not errors:
-                            st.success("Отлично! Структурных ошибок не найдено.")
-                        else:
-                            for i, err in enumerate(errors):
-                                with st.expander(f"Недочет #{i+1} (Узел: {err['node_id'][:8]}...)", expanded=True):
-                                    st.error(err['description'])
-                                    st.caption(f"Статус: {err['error_status']}")
+                with col1:
+                    st.header("Заключение Критика")
+                    if not errors:
+                        st.success("Отлично! Структурных ошибок не найдено.")
+                    else:
+                        for i, err in enumerate(errors):
+                            with st.expander(f"Недочет #{i+1} (Узел: {err['node_id'][:8]}...)", expanded=True):
+                                st.error(err['description'])
+                                st.caption(f"Статус: {err['error_status']}")
 
                     # with col2:
                     #     st.header("Советы Генератора")
@@ -85,37 +85,34 @@ if uploaded_file is not None:
                     #                 st.write(rec['recommendation']) # Тут будет текст от GigaChat
                     #                 if not is_structural:
                     #                     st.caption("Рекомендуется применить к узлу: " + rec['node_id'][:8])
-                    with col2:
-                        st.header("Советы LISA AI")
-                        if not recommendations:
-                            st.info("Загрузите файл для получения рекомендаций.")
-                        else:
-                            for i, rec in enumerate(recommendations):
-                                # Определяем иконку: стройка для структуры, перо для текста
-                                is_struct = rec.get("is_structural", False)
-                                icon = "🏗️" if is_struct else "✍️"
+                with col2:
+                    st.header("Советы LISA AI")
+                    if not recommendations:
+                        st.info("Загрузите файл для получения рекомендаций.")
+                    else:
+                        for i, rec in enumerate(recommendations):
+                            # Определяем иконку: стройка для структуры, перо для текста
+                            is_struct = rec.get("is_structural", False)
+                            icon = "🏗️" if is_struct else "✍️"
 
-                                with st.expander(f"{icon} Рекомендация #{i+1}", expanded=True):
-                                    text_content = rec['suggestion']
+                            with st.expander(f"{icon} Рекомендация #{i+1}", expanded=True):
+                                text_content = rec['suggestion']
 
-                                    if "Исправленный текст:" in text_content:
-                                        # Разделяем совет и сам текст для красоты
-                                        parts = text_content.split("Исправленный текст:")
-                                        st.markdown(f"**Анализ:** {parts[0].replace('Совет:', '').strip()}")
-                                        st.success(f"**Вариант для вставки:**\n\n{parts[1].strip()}")
-                                    else:
-                                        st.write(text_content)
+                                if "Исправленный текст:" in text_content:
+                                    # Разделяем совет и сам текст для красоты
+                                    parts = text_content.split("Исправленный текст:")
+                                    st.markdown(f"**Анализ:** {parts[0].replace('Совет:', '').strip()}")
+                                    st.success(f"**Вариант для вставки:**\n\n{parts[1].strip()}")
+                                else:
+                                    st.write(text_content)
 
-                                    if rec.get("sources"):
-                                        st.caption(f"Источник: {', '.join(rec['sources'])}")
-                else:
-                    # Обработка HTTP-ошибок от бэкенда
-                    st.error(f"Ошибка бэкенда: {response.status_code} - {response.text}")
+                                if rec.get("sources"):
+                                    st.caption(f"Источник: {', '.join(rec['sources'])}")
                     
-            except requests.exceptions.ConnectionError:
-                st.error(
-                    f"Не удалось подключиться к бэкенду по адресу `{BACKEND_URL}`. "
-                    f"Убедитесь, что вы запустили `python main.py` в другом окне терминала."
+        except requests.exceptions.ConnectionError:
+            st.error(
+                f"Не удалось подключиться к бэкенду по адресу `{BACKEND_URL}`. "
+                f"Убедитесь, что вы запустили `python main.py` в другом окне терминала."
                 )
-            except Exception as e:
-                st.error(f"Произошла непредвиденная ошибка: {e}")
+        except Exception as e:
+            st.error(f"Произошла непредвиденная ошибка: {e}")
