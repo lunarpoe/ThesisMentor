@@ -1,5 +1,6 @@
 import main
 import streamlit as st
+import asyncio
 import requests
 
 # Настройка внешнего вида страницы
