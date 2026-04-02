@@ -64,7 +64,7 @@ async def analyze_document(file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail="Допустимы только файлы .docx")
 
     try:
-        file_content = await file.read()
+        file_content = file.read()
         file_stream = io.BytesIO(file_content)
 
         # Парсим структуру в граф
