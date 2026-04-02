@@ -43,6 +43,17 @@ async def startup_event():
 
 @app.post("/analyze")
 async def analyze_document(file: UploadFile = File(...)):
+    global parser, critic, generator
+    
+
+    if parser is None:
+        parser = ThesisParser()
+    if critic is None:
+        critic = CriticManager()
+    if generator is None:
+        generator = GeneratorManager()
+        generator.add_manual_rules()
+    
     # Проверка, что системы инициализированы
     if any(s is None for s in [parser, critic, generator]):
         raise HTTPException(status_code=503, detail="Сервис не готов: ошибка инициализации компонентов")    
