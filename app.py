@@ -45,11 +45,11 @@ if uploaded_file is not None:
                 data = asyncio.run(main.analyze_document(uploaded_file))
                 
                 # Обработка успешного ответа
-                    results = data.get("results", {})
-                    errors = results.get("errors", [])
-                    recommendations = results.get("recommendations", [])
+                results = data.get("results", {})
+                errors = results.get("errors", [])
+                recommendations = results.get("recommendations", [])
                     
-                    st.success("Анализ успешно завершен!")
+                st.success("Анализ успешно завершен!")
                     
                     # Вывод отладочной информации в сайдбар
                     with debug_container.container():
