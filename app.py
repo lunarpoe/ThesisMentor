@@ -45,8 +45,6 @@ if uploaded_file is not None:
                 data = asyncio.run(main.analyze_document(uploaded_file))
                 
                 # Обработка успешного ответа
-                if response.status_code == 200:
-                    data = response.json()
                     results = data.get("results", {})
                     errors = results.get("errors", [])
                     recommendations = results.get("recommendations", [])
