@@ -60,7 +60,7 @@ async def analyze_document(file: UploadFile = File(...)):
     """
     Парсинг -> Критика -> Генерация советов
     """
-    if not file.filename.endswith('.docx'):
+    if not file.name.endswith('.docx'):
         raise HTTPException(status_code=400, detail="Допустимы только файлы .docx")
 
     try:
@@ -68,7 +68,7 @@ async def analyze_document(file: UploadFile = File(...)):
         file_stream = io.BytesIO(file_content)
 
         # Парсим структуру в граф
-        print(f"Обработка файла: {file.filename}")
+        print(f"Обработка файла: {file.name}")
         graph = parser.parse(file_stream)
 
         # Ищем нарушения правил (Критик)
@@ -80,7 +80,7 @@ async def analyze_document(file: UploadFile = File(...)):
 
         # Формируем ответ
         return {
-            "filename": file.filename,
+            "filename": file.name,
             "status": "success",
             "results": {
                 "errors": errors,
