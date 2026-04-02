@@ -1,7 +1,6 @@
 import main
 import streamlit as st
 import asyncio
-import requests
 
 # Настройка внешнего вида страницы
 st.set_page_config(
@@ -27,36 +26,27 @@ with st.sidebar:
 uploaded_file = st.file_uploader("Выберите файл .docx", type=["docx"])
 
 if uploaded_file is not None:
-    # Кнопка для старта, чтобы не отправлять запрос сразу при выборе файла
+    # Кнопка для старта
     if st.button("Запустить анализ", type="primary"):
         
         with st.spinner("Анализируем документ... Это может занять несколько секунд."):
             try:
-                # Подготовка файла для отправки через requests
-                files = {
-                    "file": (
-                        uploaded_file.name, 
-                        uploaded_file.getvalue(), 
-                        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                    )
-                }
-                
-              
+                # ВЫЗОВ АНАЛИЗА (Вместо requests)
                 data = asyncio.run(main.analyze_document(uploaded_file))
                 
-                # Обработка успешного ответа
+                # Извлекаем результаты из ответа функции
                 results = data.get("results", {})
                 errors = results.get("errors", [])
                 recommendations = results.get("recommendations", [])
                     
                 st.success("Анализ успешно завершен!")
                     
-                    # Вывод отладочной информации в сайдбар
+                # Вывод отладочной информации в сайдбар
                 with debug_container.container():
-                        st.metric("Всего узлов в графе", results.get("nodes_count", 0))
-                        st.subheader("Распознанные разделы:")
-                        for sec in results.get("detected_sections", []):
-                            st.text(f"🔹 {sec['title']}")
+                    st.metric("Всего узлов в графе", results.get("nodes_count", 0))
+                    st.subheader("Распознанные разделы:")
+                    for sec in results.get("detected_sections", []):
+                        st.text(f"🔹 {sec['title']}")
 
                 # Разделение экрана на две колонки для вывода Критика и Генератора
                 col1, col2 = st.columns(2)
@@ -69,22 +59,8 @@ if uploaded_file is not None:
                         for i, err in enumerate(errors):
                             with st.expander(f"Недочет #{i+1} (Узел: {err['node_id'][:8]}...)", expanded=True):
                                 st.error(err['description'])
-                                st.caption(f"Статус: {err['error_status']}")
+                                st.caption(f"Статус: {err.get('error_status', 'Найдено')}")
 
-                    # with col2:
-                    #     st.header("Советы Генератора")
-                    #     if not recommendations:
-                    #         st.info("Рекомендаций пока нет.")
-                    #     else:
-                    #         for i, rec in enumerate(recommendations):
-                    #             # Определяем заголовок: если есть исправленный текст, пишем "Улучшение", если нет — "Совет"
-                    #             is_structural = rec.get("is_structural", False)
-                    #             header = f"Совет #{i+1} (Структура)" if is_structural else f"Улучшение #{i+1}"
-
-                    #             with st.expander(header, expanded=True):
-                    #                 st.write(rec['recommendation']) # Тут будет текст от GigaChat
-                    #                 if not is_structural:
-                    #                     st.caption("Рекомендуется применить к узлу: " + rec['node_id'][:8])
                 with col2:
                     st.header("Советы LISA AI")
                     if not recommendations:
@@ -96,7 +72,7 @@ if uploaded_file is not None:
                             icon = "🏗️" if is_struct else "✍️"
 
                             with st.expander(f"{icon} Рекомендация #{i+1}", expanded=True):
-                                text_content = rec['suggestion']
+                                text_content = rec.get('suggestion', 'Текст отсутствует')
 
                                 if "Исправленный текст:" in text_content:
                                     # Разделяем совет и сам текст для красоты
@@ -108,11 +84,6 @@ if uploaded_file is not None:
 
                                 if rec.get("sources"):
                                     st.caption(f"Источник: {', '.join(rec['sources'])}")
-                    
-        except requests.exceptions.ConnectionError:
-            st.error(
-                f"Не удалось подключиться к бэкенду по адресу `{BACKEND_URL}`. "
-                f"Убедитесь, что вы запустили `python main.py` в другом окне терминала."
-                )
-        except Exception as e:
-            st.error(f"Произошла непредвиденная ошибка: {e}")
+            
+            except Exception as e:
+                st.error(f"Произошла непредвиденная ошибка: {e}")
