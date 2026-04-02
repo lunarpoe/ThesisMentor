@@ -52,7 +52,7 @@ if uploaded_file is not None:
                 st.success("Анализ успешно завершен!")
                     
                     # Вывод отладочной информации в сайдбар
-                    with debug_container.container():
+                with debug_container.container():
                         st.metric("Всего узлов в графе", results.get("nodes_count", 0))
                         st.subheader("Распознанные разделы:")
                         for sec in results.get("detected_sections", []):
