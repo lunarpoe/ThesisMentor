@@ -1,3 +1,4 @@
+import main
 import streamlit as st
 import requests
 
@@ -9,8 +10,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# URL  FastAPI бэкенда
-BACKEND_URL = "http://localhost:8000/analyze"
+result = main.analyze(user_input)
 
 st.title("Проверка структуры ВКР")
 st.markdown(
