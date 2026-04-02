@@ -40,8 +40,8 @@ if uploaded_file is not None:
                     )
                 }
                 
-                # Отправка POST-запроса на бэкенд
-                response = requests.post(BACKEND_URL, files=files)
+              
+                data = asyncio.run(main.analyze_document(uploaded_file))
                 
                 # Обработка успешного ответа
                 if response.status_code == 200:
