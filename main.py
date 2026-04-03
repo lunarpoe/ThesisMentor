@@ -10,6 +10,9 @@ from dotenv import load_dotenv
 import streamlit as st
 import os
 
+sys.stdin.reconfigure(encoding='utf-8')
+sys.stdout.reconfigure(encoding='utf-8')
+
 load_dotenv("config.env")
 # Load env locally, fallback to Streamlit secrets in cloud
 
