@@ -1,115 +1,79 @@
-import io
-import uvicorn
-import traceback
-from fastapi import FastAPI, UploadFile, File, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from core.parser import ThesisParser
-from core.critic import CriticManager
-from core.generator_giga import GeneratorManager 
-from dotenv import load_dotenv
+import main
 import streamlit as st
-import os
+import asyncio
 
-load_dotenv("config.env")
-# Load env locally, fallback to Streamlit secrets in cloud
-
-app = FastAPI(title="LISA AI Thesis Critic API")
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
+# Настройка внешнего вида страницы
+st.set_page_config(
+    page_title="AI Рецензент ВКР",
+    # page_icon="🎓",
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
-parser = None
-critic = None
-generator = None
+st.title("Проверка структуры ВКР")
+st.markdown(
+    "Загрузите файл вашей работы в формате `.docx`, чтобы модель-критик проверила "
+    "соответствие структуры и содержания практических глав тексту введения."
+)
 
-@app.on_event("startup")
-async def startup_event():
-    global parser, critic, generator
-    print("Инициализация систем...")
-    try:
-        parser = ThesisParser()
-        critic = CriticManager()
-        generator = GeneratorManager()
-        generator.add_manual_rules()
-        print("Все системы успешно запущены")
-    except Exception as e:
-        print(f"КРИТИЧЕСКАЯ ОШИБКА ПРИ ЗАПУСКЕ: {e}")
-        traceback.print_exc()
-        # В рабочем окружении здесь можно даже завершить процесс sys.exit(1)
+# для отладочной информации
+with st.sidebar:
+    st.header(" Отладка парсера")
+    st.info("структура документа после обработки.")
+    debug_container = st.empty()
 
-@app.post("/analyze")
-async def analyze_document(file: UploadFile = File(...)):
-    global parser, critic, generator
-    
+# 3. Основная область загрузки файла
+uploaded_file = st.file_uploader("Выберите файл .docx", type=["docx"])
 
-    if parser is None:
-        parser = ThesisParser()
-    if critic is None:
-        critic = CriticManager()
-    if generator is None:
-        generator = GeneratorManager()
-        generator.add_manual_rules()
-    
-    # Проверка, что системы инициализированы
-    if any(s is None for s in [parser, critic, generator]):
-        raise HTTPException(status_code=503, detail="Сервис не готов: ошибка инициализации компонентов")    
-    """
-    Парсинг -> Критика -> Генерация советов
-    """
-    if not file.name.endswith('.docx'):
-        raise HTTPException(status_code=400, detail="Допустимы только файлы .docx")
+if uploaded_file is not None:
+    # Кнопка для старта
+    if st.button("Запустить анализ", type="primary"):
+        
+        with st.spinner("Анализируем документ... Это может занять несколько секунд."):
+            try:
+                # ВЫЗОВ АНАЛИЗА (Заменили requests на прямой вызов из main)
+                # Передаем uploaded_file вместо несуществующего user_input
+                data = asyncio.run(main.analyze_document(uploaded_file))
+                
+                # Извлекаем результаты из ответа (как в твоем исходном коде)
+                results = data.get("results", {})
+                errors = results.get("errors", [])
+                recommendations = results.get("recommendations", [])
+                    
+                st.success("Анализ успешно завершен!")
+                    
+                # Вывод отладочной информации в сайдбар
+                with debug_container.container():
+                    st.metric("Всего узлов в графе", results.get("nodes_count", 0))
+                    st.subheader("Распознанные разделы:")
+                    for sec in results.get("detected_sections", []):
+                        st.text(f"🔹 {sec['title']}")
 
-    try:
-        file_content = file.read()
-        file_stream = io.BytesIO(file_content)
+                # Разделение экрана на две колонки (Твой дизайн)
+                col1, col2 = st.columns(2)
+                    
+                with col1:
+                    st.header("Заключение Критика")
+                    if not errors:
+                        st.success("Отлично! Структурных ошибок не найдено.")
+                    else:
+                        for i, err in enumerate(errors):
+                            with st.expander(f"Недочет #{i+1} (Узел: {err['node_id'][:8]}...)", expanded=True):
+                                st.error(err['description'])
+                                st.caption(f"Статус: {err.get('error_status', 'Найдено')}")
 
-        # Парсим структуру в граф
-        print(f"Обработка файла: {file.name}")
-        graph = parser.parse(file_stream)
+                with col2:
+                    st.header("Советы LISA AI")
+                    if not recommendations:
+                        st.info("Загрузите файл для получения рекомендаций.")
+                    else:
+                        for i, rec in enumerate(recommendations):
+                            is_struct = rec.get("is_structural", False)
+                            icon = "🏗️" if is_struct else "✍️"
 
-        # Ищем нарушения правил (Критик)
-        errors = critic.run_all(graph)
+                            with st.expander(f"{icon} Рекомендация #{i+1}", expanded=True):
+                                text_content = rec.get('suggestion', '')
 
-        # Генерируем рекомендации (Генератор)
-        # передаем и список ошибок, и сам граф для доступа к текстам
-        recommendations = generator.generate_recommendations_from_errors(errors, graph)
-
-        # Формируем ответ
-        return {
-            "filename": file.name,
-            "status": "success",
-            "results": {
-                "errors": errors,
-                "recommendations": recommendations,
-                "nodes_count": len(graph["nodes"]),
-                "detected_sections": [
-                    {"id": n["id"], "title": n["title"]} 
-                    for n in graph["nodes"].values() if n["type"] == "SECTION"
-                ]
-            }
-        }
-
-    except Exception as e:
-        print(f"Ошибка при анализе: {str(e)}")
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Внутренняя ошибка сервера: {str(e)}")
-
-@app.get("/health")
-async def health_check():
-    """Проверка жизни сервиса"""
-    return {
-        "status": "online",
-        "components": {
-            "parser": "ok",
-            "critic": "ok",
-            "generator": "ok"
-        }
-    }
-
-# if __name__ == "__main__":
-    # Если запуск из-под Docker 0.0.0.0
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+                                if "Исправленный текст:" in text_content:
+                                    parts = text_content.split("Исправленный текст:")
+                                    st.markdown(f"**Анализ:** {parts
