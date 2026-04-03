@@ -33,7 +33,8 @@ async def startup_event():
     try:
         parser = ThesisParser()
         critic = CriticManager()
-        generator = GeneratorManager()
+        credentials = os.getenv("GIGACHAT_CREDENTIALS")
+        generator = GeneratorManager(credentials=credentials)
         generator.add_manual_rules()
         print("Все системы успешно запущены")
     except Exception as e:
