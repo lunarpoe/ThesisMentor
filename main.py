@@ -43,21 +43,32 @@ async def startup_event():
 
 @app.post("/analyze")
 async def analyze_document(file: UploadFile = File(...)):
+    global parser, critic, generator
+    
+
+    if parser is None:
+        parser = ThesisParser()
+    if critic is None:
+        critic = CriticManager()
+    if generator is None:
+        generator = GeneratorManager()
+        generator.add_manual_rules()
+    
     # Проверка, что системы инициализированы
     if any(s is None for s in [parser, critic, generator]):
         raise HTTPException(status_code=503, detail="Сервис не готов: ошибка инициализации компонентов")    
     """
     Парсинг -> Критика -> Генерация советов
     """
-    if not file.filename.endswith('.docx'):
+    if not file.name.endswith('.docx'):
         raise HTTPException(status_code=400, detail="Допустимы только файлы .docx")
 
     try:
-        file_content = await file.read()
+        file_content = file.read()
         file_stream = io.BytesIO(file_content)
 
         # Парсим структуру в граф
-        print(f"Обработка файла: {file.filename}")
+        print(f"Обработка файла: {file.name}")
         graph = parser.parse(file_stream)
 
         # Ищем нарушения правил (Критик)
@@ -69,7 +80,7 @@ async def analyze_document(file: UploadFile = File(...)):
 
         # Формируем ответ
         return {
-            "filename": file.filename,
+            "filename": file.name,
             "status": "success",
             "results": {
                 "errors": errors,
@@ -99,6 +110,6 @@ async def health_check():
         }
     }
 
-if __name__ == "__main__":
+# if __name__ == "__main__":
     # Если запуск из-под Docker 0.0.0.0
     uvicorn.run(app, host="127.0.0.1", port=8000)
