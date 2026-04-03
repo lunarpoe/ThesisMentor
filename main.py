@@ -1,4 +1,3 @@
-import sys
 import io
 import uvicorn
 import traceback
@@ -10,10 +9,6 @@ from core.generator_giga import GeneratorManager
 from dotenv import load_dotenv
 import streamlit as st
 import os
-
-os.environ["PYTHONIOENCODING"] = "utf-8"
-sys.stdin.reconfigure(encoding='utf-8')
-sys.stdout.reconfigure(encoding='utf-8')
 
 load_dotenv("config.env")
 # Load env locally, fallback to Streamlit secrets in cloud
@@ -38,8 +33,7 @@ async def startup_event():
     try:
         parser = ThesisParser()
         critic = CriticManager()
-        giga_key = os.getenv("GIGACHAT_CREDENTIALS")
-        generator = GeneratorManager(credentials=giga_key)
+        generator = GeneratorManager()
         generator.add_manual_rules()
         print("Все системы успешно запущены")
     except Exception as e:
@@ -49,30 +43,21 @@ async def startup_event():
 
 @app.post("/analyze")
 async def analyze_document(file: UploadFile = File(...)):
-    global parser, critic, generator
-    
-
-    if parser is None:
-        parser = ThesisParser()
-    if critic is None:
-        critic = CriticManager()
-  
-    
     # Проверка, что системы инициализированы
     if any(s is None for s in [parser, critic, generator]):
         raise HTTPException(status_code=503, detail="Сервис не готов: ошибка инициализации компонентов")    
     """
     Парсинг -> Критика -> Генерация советов
     """
-    if not file.name.endswith('.docx'):
+    if not file.filename.endswith('.docx'):
         raise HTTPException(status_code=400, detail="Допустимы только файлы .docx")
 
     try:
-        file_content = file.read()
+        file_content = await file.read()
         file_stream = io.BytesIO(file_content)
 
         # Парсим структуру в граф
-        print(f"Обработка файла: {file.name}")
+        print(f"Обработка файла: {file.filename}")
         graph = parser.parse(file_stream)
 
         # Ищем нарушения правил (Критик)
@@ -84,7 +69,7 @@ async def analyze_document(file: UploadFile = File(...)):
 
         # Формируем ответ
         return {
-            "filename": file.name,
+            "filename": file.filename,
             "status": "success",
             "results": {
                 "errors": errors,
@@ -114,6 +99,6 @@ async def health_check():
         }
     }
 
-# if __name__ == "__main__":
+if __name__ == "__main__":
     # Если запуск из-под Docker 0.0.0.0
     uvicorn.run(app, host="127.0.0.1", port=8000)
