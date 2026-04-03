@@ -29,9 +29,9 @@ generator = None
 @app.on_event("startup")
 async def startup_event():
     global parser, critic, generator
-if parser is None: parser = ThesisParser()
-if critic is None: critic = CriticManager()
-if generator is None:
+    if parser is None: parser = ThesisParser()
+    if critic is None: critic = CriticManager()
+    if generator is None:
     generator = GeneratorManager()
     generator.add_manual_rules()
     global parser, critic, generator
