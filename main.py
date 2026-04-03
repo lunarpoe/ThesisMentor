@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 import streamlit as st
 import os
 
+os.environ["PYTHONIOENCODING"] = "utf-8"
 sys.stdin.reconfigure(encoding='utf-8')
 sys.stdout.reconfigure(encoding='utf-8')
 
@@ -55,9 +56,7 @@ async def analyze_document(file: UploadFile = File(...)):
         parser = ThesisParser()
     if critic is None:
         critic = CriticManager()
-    if generator is None:
-        generator = GeneratorManager()
-        generator.add_manual_rules()
+  
     
     # Проверка, что системы инициализированы
     if any(s is None for s in [parser, critic, generator]):
