@@ -62,7 +62,7 @@ if uploaded_file is not None:
                                 st.caption(f"Статус: {err.get('error_status', 'Найдено')}")
 
                 with col2:
-                    st.header("Советы LISA AI")
+                    st.header("Советы от LLM GigaChat")
                     if not recommendations:
                         st.info("Загрузите файл для получения рекомендаций.")
                     else:
